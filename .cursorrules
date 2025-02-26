@@ -11,6 +11,7 @@ client should handle input, rendering and networking.
 
 server should handle the game logic and state.
 
+File names should be in kebab-case.
 
 diep.io game design:
 Player can move around the map.
