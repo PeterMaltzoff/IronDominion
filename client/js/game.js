@@ -5,11 +5,21 @@ class Game {
             height: window.innerHeight,
             backgroundColor: 0xf0f0f0,
             resolution: window.devicePixelRatio || 1,
+            autoDensity: true,
+            resizeTo: window
         });
         this.app.view.id = 'gameCanvas';
         
         this.players = new Map();
-        this.socket = io();
+        
+        // Connect to game namespace with specific path
+        this.socket = io('/game', {
+            path: '/game-socket/'
+        });
+        
+        // Get game ID from URL
+        const gameId = window.location.pathname.split('/').pop();
+        
         this.setupSocketListeners();
         this.setupEventListeners();
         
@@ -22,6 +32,24 @@ class Game {
         };
         
         this.setupGame();
+        
+        // Auto-join the game from URL
+        if (gameId) {
+            this.socket.emit('joinGame', gameId);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', this.handleResize.bind(this));
+    }
+
+    handleResize() {
+        // Update player position relative to new dimensions
+        this.player.x = (this.player.x / this.app.screen.width) * window.innerWidth;
+        this.player.y = (this.player.y / this.app.screen.height) * window.innerHeight;
+        
+        // Redraw grid for new dimensions
+        this.grid.removeChildren();
+        this.drawGrid();
     }
 
     setupGame() {
@@ -44,15 +72,15 @@ class Game {
         graphics.lineStyle(1, 0xcccccc, 0.3);
         
         // Draw vertical lines
-        for (let x = 0; x < this.app.screen.width; x += 50) {
+        for (let x = 0; x < window.innerWidth; x += 50) {
             graphics.moveTo(x, 0);
-            graphics.lineTo(x, this.app.screen.height);
+            graphics.lineTo(x, window.innerHeight);
         }
         
         // Draw horizontal lines
-        for (let y = 0; y < this.app.screen.height; y += 50) {
+        for (let y = 0; y < window.innerHeight; y += 50) {
             graphics.moveTo(0, y);
-            graphics.lineTo(this.app.screen.width, y);
+            graphics.lineTo(window.innerWidth, y);
         }
         
         this.grid.addChild(graphics);
@@ -73,8 +101,6 @@ class Game {
     setupSocketListeners() {
         this.socket.on('gameJoined', ({ gameId }) => {
             console.log('Joined game:', gameId);
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('gameCanvas').style.display = 'block';
         });
 
         this.socket.on('playerUpdated', ({ id, x, y, rotation }) => {
@@ -99,17 +125,6 @@ class Game {
     }
 
     setupEventListeners() {
-        document.getElementById('playButton').addEventListener('click', () => {
-            this.socket.emit('joinGame');
-        });
-
-        document.getElementById('joinButton').addEventListener('click', () => {
-            const gameId = document.getElementById('gameIdInput').value.toUpperCase();
-            if (gameId.length === 4) {
-                this.socket.emit('joinGame', gameId);
-            }
-        });
-
         // Mouse movement
         document.addEventListener('mousemove', (e) => {
             const dx = e.clientX - this.player.x;

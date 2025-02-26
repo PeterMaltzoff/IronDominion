@@ -19,12 +19,6 @@
             text-align: center;
             color: white;
         }
-        #gameCanvas {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
         button {
             background: #4CAF50;
             border: none;
@@ -52,15 +46,28 @@
 <body>
     <div id="menu">
         <h1>Iron Dominion</h1>
-        <button id="playButton">Play</button>
+        <button id="playButton" onclick="window.location.href='/play'">Play</button>
         <br>
         <input type="text" id="gameIdInput" placeholder="Enter game ID" maxlength="4">
-        <button id="joinButton">Join Game</button>
+        <button id="joinButton" onclick="joinGame()">Join Game</button>
     </div>
-    <canvas id="gameCanvas"></canvas>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/game.js"></script>
+    <script>
+        function joinGame() {
+            const gameId = document.getElementById('gameIdInput').value.toUpperCase();
+            if (gameId.length === 4) {
+                window.location.href = `/game/${gameId}`;
+            } else {
+                alert('Please enter a valid 4-character game ID');
+            }
+        }
+
+        // Also allow Enter key to join game
+        document.getElementById('gameIdInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                joinGame();
+            }
+        });
+    </script>
 </body>
 </html> 
