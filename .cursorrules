@@ -34,3 +34,6 @@ Players can buy upgrades to their tank:
 - Projectile speed
 - Projectile health (piercing)
 
+The game has two pages:
+- /: main menu
+- /game/: game page
