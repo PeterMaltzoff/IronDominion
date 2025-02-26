@@ -10,3 +10,26 @@ We are using the following libraries:
 client should handle input, rendering and networking.
 
 server should handle the game logic and state.
+
+
+diep.io game design:
+Player can move around the map.
+Player can shoot projectiles.
+Projectiles can collide with other players and walls.
+Players can die and respawn after a short delay.
+Players can gain experience and level up.
+Players gain experience by killing other players.
+Players also gain experience by destroying food around the map.
+The food types are:
+- Yellow square: 100 experience
+- Red triangle: 300 experience
+- Blue pentagon: 900 experience
+Game has a basic physics engine. Feels mushy but good.
+Players can buy upgrades to their tank:
+- Health
+- Speed
+- Damage
+- Fire rate
+- Projectile speed
+- Projectile health (piercing)
+
