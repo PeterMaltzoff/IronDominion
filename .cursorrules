@@ -1,0 +1,12 @@
+The tech stack is Fastify, Socket.IO, and PixiJS.
+
+We are making an exact clone of diep.io.
+
+We are using the following libraries:
+- PixiJS for rendering
+- Socket.IO for networking
+- Fastify for the server
+
+client should handle input, rendering and networking.
+
+server should handle the game logic and state.

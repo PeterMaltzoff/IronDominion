@@ -11,25 +11,83 @@ fastify.register(fastifyStatic, {
 
 // Game state
 const games = new Map();
-const GAME_CAPACITY = 10; // Max players per game
+const GAME_CAPACITY = 10;
+const TICK_RATE = 60;
+const PLAYER_SPEED = 5;
+
+class Player {
+  constructor(id, x, y) {
+    this.id = id;
+    this.x = x;
+    this.y = y;
+    this.rotation = 0;
+    this.inputs = {
+      up: false,
+      down: false,
+      left: false,
+      right: false
+    };
+  }
+
+  update() {
+    // Update position based on inputs
+    if (this.inputs.up) this.y -= PLAYER_SPEED;
+    if (this.inputs.down) this.y += PLAYER_SPEED;
+    if (this.inputs.left) this.x -= PLAYER_SPEED;
+    if (this.inputs.right) this.x += PLAYER_SPEED;
+  }
+}
+
+class GameInstance {
+  constructor() {
+    this.players = new Map();
+  }
+
+  addPlayer(id) {
+    // Start player in middle of game area
+    const player = new Player(id, 1000, 1000);
+    this.players.set(id, player);
+    return player;
+  }
+
+  removePlayer(id) {
+    this.players.delete(id);
+  }
+
+  update() {
+    // Update all players
+    for (const player of this.players.values()) {
+      player.update();
+    }
+  }
+
+  getState() {
+    const state = [];
+    for (const [id, player] of this.players) {
+      state.push({
+        id,
+        x: player.x,
+        y: player.y,
+        rotation: player.rotation
+      });
+    }
+    return state;
+  }
+}
 
 function generateGameId() {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
 function findOrCreateGame() {
-  // Look for an existing game with space
   for (const [id, game] of games) {
     if (game.players.size < GAME_CAPACITY) {
-      console.log(`Found existing game with space: ${id}`);
       return id;
     }
   }
   
-  // No games with space found, create new one
   const newId = generateGameId();
-  console.log(`Creating new game: ${newId}`);
-  games.set(newId, { players: new Set() });
+  games.set(newId, new GameInstance());
   return newId;
 }
 
@@ -64,12 +122,10 @@ const start = async () => {
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
     console.log('Server running at http://localhost:3000');
 
-    // Setup Socket.IO with path specific to game namespace
     const io = new Server(fastify.server, {
       path: '/game-socket/'
     });
 
-    // Create a namespace for games
     const gameNamespace = io.of('/game');
     
     gameNamespace.on('connection', (socket) => {
@@ -78,55 +134,78 @@ const start = async () => {
 
       socket.on('joinGame', (requestedId) => {
         gameId = requestedId || findOrCreateGame();
-        console.log(`Player ${socket.id} joining game ${gameId} (${requestedId ? 'requested' : 'auto-assigned'})`);
         
         if (!games.has(gameId)) {
-          console.log(`Creating new game with ID: ${gameId}`);
-          games.set(gameId, { players: new Set() });
+          games.set(gameId, new GameInstance());
         }
 
         const game = games.get(gameId);
-        game.players.add(socket.id);
+        const player = game.addPlayer(socket.id);
         socket.join(gameId);
         
-        console.log(`Game ${gameId} now has ${game.players.size} players`);
-        socket.emit('gameJoined', { gameId });
+        // Send initial game state
+        socket.emit('gameJoined', { 
+          gameId,
+          player: {
+            x: player.x,
+            y: player.y,
+            rotation: player.rotation
+          }
+        });
+
+        // Send existing players to the new player
+        for (const [playerId, existingPlayer] of game.players) {
+          if (playerId !== socket.id) {
+            socket.emit('playerJoined', {
+              id: playerId,
+              x: existingPlayer.x,
+              y: existingPlayer.y,
+              rotation: existingPlayer.rotation
+            });
+          }
+        }
+
+        // Broadcast new player to others
+        socket.to(gameId).emit('playerJoined', {
+          id: socket.id,
+          x: player.x,
+          y: player.y,
+          rotation: player.rotation
+        });
       });
 
-      socket.on('playerUpdate', (data) => {
-        if (gameId) {
-          console.log(`Player ${socket.id} in game ${gameId} updated:`, data);
-          socket.to(gameId).emit('playerUpdated', { ...data, id: socket.id });
-        } else {
-          console.warn(`Received player update from ${socket.id} but not in a game`);
+      socket.on('playerInput', (data) => {
+        if (gameId && games.has(gameId)) {
+          const game = games.get(gameId);
+          const player = game.players.get(socket.id);
+          if (player) {
+            player.inputs = data.inputs;
+            player.rotation = data.rotation;
+          }
         }
       });
 
       socket.on('disconnect', () => {
-        console.log(`Socket disconnected: ${socket.id}`);
         if (gameId && games.has(gameId)) {
           const game = games.get(gameId);
-          game.players.delete(socket.id);
-          
-          console.log(`Player ${socket.id} left game ${gameId}. ${game.players.size} players remaining`);
+          game.removePlayer(socket.id);
           
           if (game.players.size === 0) {
-            console.log(`Game ${gameId} is empty, removing it`);
             games.delete(gameId);
+          } else {
+            socket.to(gameId).emit('playerLeft', { id: socket.id });
           }
-          
-          socket.to(gameId).emit('playerLeft', { id: socket.id });
         }
       });
     });
 
-    // Add periodic logging of active games
+    // Game loop for each game instance
     setInterval(() => {
-      console.log('\nActive games status:');
-      games.forEach((game, id) => {
-        console.log(`Game ${id}: ${game.players.size} players`);
-      });
-    }, 30000); // Log every 30 seconds
+      for (const [gameId, game] of games) {
+        game.update();
+        gameNamespace.to(gameId).emit('gameState', game.getState());
+      }
+    }, 1000 / TICK_RATE);
 
   } catch (err) {
     console.error(err);

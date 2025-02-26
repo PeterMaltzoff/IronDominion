@@ -11,8 +11,14 @@ class Game {
         this.app.view.id = 'gameCanvas';
         
         this.players = new Map();
+        this.playerInputs = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
         
-        // Connect to game namespace with specific path
+        // Connect to game namespace
         this.socket = io('/game', {
             path: '/game-socket/'
         });
@@ -22,15 +28,6 @@ class Game {
         
         this.setupSocketListeners();
         this.setupEventListeners();
-        
-        // Player properties
-        this.player = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2,
-            rotation: 0,
-            speed: 5,
-        };
-        
         this.setupGame();
         
         // Auto-join the game from URL
@@ -43,10 +40,6 @@ class Game {
     }
 
     handleResize() {
-        // Update player position relative to new dimensions
-        this.player.x = (this.player.x / this.app.screen.width) * window.innerWidth;
-        this.player.y = (this.player.y / this.app.screen.height) * window.innerHeight;
-        
         // Redraw grid for new dimensions
         this.grid.removeChildren();
         this.drawGrid();
@@ -58,13 +51,10 @@ class Game {
         this.app.stage.addChild(this.grid);
         this.drawGrid();
 
-        // Player
+        // Local player
         this.playerGraphics = new PIXI.Graphics();
         this.drawPlayer(this.playerGraphics, 0x4CAF50);
         this.app.stage.addChild(this.playerGraphics);
-
-        // Game loop
-        this.app.ticker.add(() => this.gameLoop());
     }
 
     drawGrid() {
@@ -99,21 +89,35 @@ class Game {
     }
 
     setupSocketListeners() {
-        this.socket.on('gameJoined', ({ gameId }) => {
+        this.socket.on('gameJoined', ({ gameId, player }) => {
             console.log('Joined game:', gameId);
+            // Set initial player position
+            this.playerGraphics.position.set(player.x, player.y);
+            this.playerGraphics.rotation = player.rotation;
         });
 
-        this.socket.on('playerUpdated', ({ id, x, y, rotation }) => {
-            if (!this.players.has(id)) {
-                const graphics = new PIXI.Graphics();
-                this.drawPlayer(graphics, 0xff0000);
-                this.app.stage.addChild(graphics);
-                this.players.set(id, graphics);
+        this.socket.on('playerJoined', ({ id, x, y, rotation }) => {
+            const graphics = new PIXI.Graphics();
+            this.drawPlayer(graphics, 0xff0000);
+            graphics.position.set(x, y);
+            graphics.rotation = rotation;
+            this.app.stage.addChild(graphics);
+            this.players.set(id, graphics);
+        });
+
+        this.socket.on('gameState', (state) => {
+            for (const player of state) {
+                if (player.id === this.socket.id) {
+                    // Update local player
+                    this.playerGraphics.position.set(player.x, player.y);
+                    this.playerGraphics.rotation = player.rotation;
+                } else if (this.players.has(player.id)) {
+                    // Update other players
+                    const graphics = this.players.get(player.id);
+                    graphics.position.set(player.x, player.y);
+                    graphics.rotation = player.rotation;
+                }
             }
-            
-            const playerGraphics = this.players.get(id);
-            playerGraphics.position.set(x, y);
-            playerGraphics.rotation = rotation;
         });
 
         this.socket.on('playerLeft', ({ id }) => {
@@ -125,37 +129,47 @@ class Game {
     }
 
     setupEventListeners() {
-        // Mouse movement
+        // Mouse movement for rotation
         document.addEventListener('mousemove', (e) => {
-            const dx = e.clientX - this.player.x;
-            const dy = e.clientY - this.player.y;
-            this.player.rotation = Math.atan2(dy, dx);
+            const dx = e.clientX - this.playerGraphics.x;
+            const dy = e.clientY - this.playerGraphics.y;
+            const rotation = Math.atan2(dy, dx);
+            
+            // Send rotation to server
+            this.socket.emit('playerInput', {
+                inputs: this.playerInputs,
+                rotation: rotation
+            });
         });
 
         // WASD movement
-        const keys = new Set();
-        document.addEventListener('keydown', (e) => keys.add(e.key.toLowerCase()));
-        document.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
-        
-        this.keys = keys;
-    }
+        const keyMap = {
+            'w': 'up',
+            's': 'down',
+            'a': 'left',
+            'd': 'right'
+        };
 
-    gameLoop() {
-        // Update player position based on WASD input
-        if (this.keys.has('w')) this.player.y -= this.player.speed;
-        if (this.keys.has('s')) this.player.y += this.player.speed;
-        if (this.keys.has('a')) this.player.x -= this.player.speed;
-        if (this.keys.has('d')) this.player.x += this.player.speed;
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (keyMap[key]) {
+                this.playerInputs[keyMap[key]] = true;
+                this.socket.emit('playerInput', {
+                    inputs: this.playerInputs,
+                    rotation: this.playerGraphics.rotation
+                });
+            }
+        });
 
-        // Update player graphics
-        this.playerGraphics.position.set(this.player.x, this.player.y);
-        this.playerGraphics.rotation = this.player.rotation;
-
-        // Send player update to server
-        this.socket.emit('playerUpdate', {
-            x: this.player.x,
-            y: this.player.y,
-            rotation: this.player.rotation
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keyMap[key]) {
+                this.playerInputs[keyMap[key]] = false;
+                this.socket.emit('playerInput', {
+                    inputs: this.playerInputs,
+                    rotation: this.playerGraphics.rotation
+                });
+            }
         });
     }
 }
