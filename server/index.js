@@ -15,6 +15,7 @@ fastify.register(fastifyStatic, {
 
 // Game constants
 const TICK_RATE = 60;
+const TICK_INTERVAL = 1000 / TICK_RATE;
 
 // Setup routes
 setupRoutes(fastify);
@@ -37,7 +38,7 @@ const start = async () => {
         game.update();
         gameNamespace.to(gameId).emit('gameState', game.getState());
       }
-    }, 1000 / TICK_RATE);
+    }, TICK_INTERVAL);
 
   } catch (err) {
     console.error(err);

@@ -29,32 +29,19 @@ function setupSocketHandlers(io) {
       // Send initial game state
       socket.emit('gameJoined', { 
         gameId,
-        player: {
-          x: player.x,
-          y: player.y,
-          rotation: player.rotation
-        }
+        player: player.getState(),
+        worldBounds: game.getState().worldBounds
       });
 
       // Send existing players to the new player
-      for (const [playerId, existingPlayer] of game.players) {
-        if (playerId !== socket.id) {
-          socket.emit('playerJoined', {
-            id: playerId,
-            x: existingPlayer.x,
-            y: existingPlayer.y,
-            rotation: existingPlayer.rotation
-          });
+      for (const existingPlayer of game.players.values()) {
+        if (existingPlayer.id !== socket.id) {
+          socket.emit('playerJoined', existingPlayer.getState());
         }
       }
 
       // Broadcast new player to others
-      socket.to(gameId).emit('playerJoined', {
-        id: socket.id,
-        x: player.x,
-        y: player.y,
-        rotation: player.rotation
-      });
+      socket.to(gameId).emit('playerJoined', player.getState());
     });
 
     socket.on('playerInput', (data) => {
@@ -64,6 +51,31 @@ function setupSocketHandlers(io) {
         if (player) {
           player.inputs = data.inputs;
           player.rotation = data.rotation;
+        }
+      }
+    });
+
+    socket.on('shoot', () => {
+      if (gameId && games.has(gameId)) {
+        const game = games.get(gameId);
+        const projectile = game.handlePlayerShoot(socket.id);
+        
+        if (projectile) {
+          // Notify all players about the new projectile
+          gameNamespace.to(gameId).emit('projectileCreated', projectile.getState());
+        }
+      }
+    });
+
+    socket.on('upgrade', (stat) => {
+      if (gameId && games.has(gameId)) {
+        const game = games.get(gameId);
+        const success = game.upgradePlayer(socket.id, stat);
+        
+        if (success) {
+          // Send updated player state
+          const player = game.players.get(socket.id);
+          socket.emit('playerUpdated', player.getState());
         }
       }
     });
