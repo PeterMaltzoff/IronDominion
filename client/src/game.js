@@ -105,15 +105,11 @@ class Game {
         
         // Draw body (circle)
         graphics.fill({ color });
-        graphics.beginFill(color);
         graphics.circle(0, 0, 20);
-        graphics.endFill();
         
         // Draw cannon (rectangle)
-        // Move to center, then draw rectangle
-        graphics.beginFill(color);
-        graphics.rect(0, -10, 30, 20); // Changed x from 15 to 0 to center the cannon
-        graphics.endFill();
+        graphics.fill({ color });
+        graphics.rect(0, -10, 30, 20);
     }
 
     setupSocketListeners() {
