@@ -177,9 +177,6 @@ class Game {
             // Update local rotation immediately for smooth feel
             this.playerGraphics.rotation = rotation;
             
-            // Debug: log rotation
-            console.log('Rotation:', rotation);
-            
             // Send rotation to server
             this.socket.emit('playerInput', {
                 inputs: this.playerInputs,
