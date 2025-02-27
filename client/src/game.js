@@ -43,6 +43,15 @@ class Game {
         // Auto-join the game from URL
         if (gameId) {
             this.socket.emit('joinGame', gameId);
+            
+            // Set a timeout to check if we successfully joined the game
+            setTimeout(() => {
+                // If we haven't received a gameJoined event after 3 seconds, redirect to home
+                if (!this.gameJoined) {
+                    console.log('Game not found or join failed, redirecting to home');
+                    window.location.href = '/';
+                }
+            }, 3000);
         }
 
         // Handle window resize
@@ -108,11 +117,26 @@ class Game {
     }
 
     setupSocketListeners() {
+        // Track if we've successfully joined a game
+        this.gameJoined = false;
+        
+        // Listen for game not found error
+        this.socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            window.location.href = '/';
+        });
+        
         this.socket.on('gameJoined', ({ gameId, player }) => {
             console.log('Joined game:', gameId);
             // Set initial player position
             this.playerGraphics.position.set(player.x, player.y);
             this.playerGraphics.rotation = player.rotation;
+            this.gameJoined = true;
+        });
+        
+        this.socket.on('gameNotFound', () => {
+            console.log('Game not found, redirecting to home');
+            window.location.href = '/';
         });
 
         this.socket.on('playerJoined', ({ id, x, y, rotation }) => {

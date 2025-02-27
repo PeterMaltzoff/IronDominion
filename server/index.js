@@ -109,8 +109,8 @@ fastify.get('/game/:id', async (request, reply) => {
   console.log(`Join game requested for ID: ${gameId}`);
   
   if (!games.has(gameId)) {
-    console.log(`Game ${gameId} not found`);
-    return reply.status(404).send({ error: 'Game not found' });
+    console.log(`Game ${gameId} not found, redirecting to home`);
+    return reply.redirect('/');
   }
   
   return reply.sendFile('game.html');
@@ -136,6 +136,13 @@ const start = async () => {
         gameId = requestedId || findOrCreateGame();
         
         if (!games.has(gameId)) {
+          // If the requested game doesn't exist, emit gameNotFound event
+          if (requestedId) {
+            console.log(`Game ${gameId} not found, sending gameNotFound event`);
+            socket.emit('gameNotFound');
+            return;
+          }
+          // Otherwise create a new game
           games.set(gameId, new GameInstance());
         }
 
