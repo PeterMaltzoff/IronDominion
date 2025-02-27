@@ -23,8 +23,9 @@ setupRoutes(fastify);
 // Start server
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000, host: '0.0.0.0' });
-    console.log('Server running at http://localhost:3000');
+    const PORT = process.env.PORT || 3000;
+    await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    console.log(`Server running at http://localhost:${PORT}`);
 
     const io = new Server(fastify.server, {
       path: '/game-socket/'
