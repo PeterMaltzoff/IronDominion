@@ -1,42 +1,55 @@
+import * as PIXI from 'pixi.js';
+import { io } from 'socket.io-client';
+
 class Game {
-    constructor() {
-        this.app = new PIXI.Application({
+    async init() {
+        // Create the PixiJS application instance
+        this.app = new PIXI.Application();
+
+        // Initialize the application with options
+        await this.app.init({
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: 0xf0f0f0,
+            background: '#f0f0f0', // Use CSS color string
+            antialias: true,
             resolution: window.devicePixelRatio || 1,
             autoDensity: true,
-            resizeTo: window
         });
-        this.app.view.id = 'gameCanvas';
-        
+
+        // Add the application canvas to the DOM
+        document.body.appendChild(this.app.canvas);
+
+        // Initialize player data
         this.players = new Map();
         this.playerInputs = {
             up: false,
             down: false,
             left: false,
-            right: false
+            right: false,
         };
-        
+
         // Connect to game namespace
         this.socket = io('/game', {
-            path: '/game-socket/'
+            path: '/game-socket/',
         });
-        
+
         // Get game ID from URL
         const gameId = window.location.pathname.split('/').pop();
-        
+
         this.setupSocketListeners();
         this.setupEventListeners();
         this.setupGame();
-        
+
         // Auto-join the game from URL
         if (gameId) {
             this.socket.emit('joinGame', gameId);
         }
 
         // Handle window resize
-        window.addEventListener('resize', this.handleResize.bind(this));
+        window.addEventListener('resize', () => {
+            this.app.renderer.resize(window.innerWidth, window.innerHeight);
+            this.handleResize();
+        });
     }
 
     handleResize() {
@@ -59,18 +72,20 @@ class Game {
 
     drawGrid() {
         const graphics = new PIXI.Graphics();
-        graphics.lineStyle(1, 0xcccccc, 0.3);
+        const width = window.innerWidth;
+        const height = window.innerHeight;
         
         // Draw vertical lines
-        for (let x = 0; x < window.innerWidth; x += 50) {
+        graphics.stroke({ width: 1, color: 0xcccccc, alpha: 0.3 });
+        for (let x = 0; x < width; x += 50) {
             graphics.moveTo(x, 0);
-            graphics.lineTo(x, window.innerHeight);
+            graphics.lineTo(x, height);
         }
         
         // Draw horizontal lines
-        for (let y = 0; y < window.innerHeight; y += 50) {
+        for (let y = 0; y < height; y += 50) {
             graphics.moveTo(0, y);
-            graphics.lineTo(window.innerWidth, y);
+            graphics.lineTo(width, y);
         }
         
         this.grid.addChild(graphics);
@@ -78,13 +93,17 @@ class Game {
 
     drawPlayer(graphics, color) {
         graphics.clear();
+        
+        // Draw body (circle)
+        graphics.fill({ color });
         graphics.beginFill(color);
-        graphics.drawCircle(0, 0, 20);
+        graphics.circle(0, 0, 20);
         graphics.endFill();
         
-        // Draw cannon
+        // Draw cannon (rectangle)
+        // Move to center, then draw rectangle
         graphics.beginFill(color);
-        graphics.drawRect(15, -10, 30, 20);
+        graphics.rect(0, -10, 30, 20); // Changed x from 15 to 0 to center the cannon
         graphics.endFill();
     }
 
@@ -135,6 +154,12 @@ class Game {
             const dy = e.clientY - this.playerGraphics.y;
             const rotation = Math.atan2(dy, dx);
             
+            // Update local rotation immediately for smooth feel
+            this.playerGraphics.rotation = rotation;
+            
+            // Debug: log rotation
+            console.log('Rotation:', rotation);
+            
             // Send rotation to server
             this.socket.emit('playerInput', {
                 inputs: this.playerInputs,
@@ -175,7 +200,8 @@ class Game {
 }
 
 // Start game when window loads
-window.onload = () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const game = new Game();
-    document.body.appendChild(game.app.view);
-}; 
+    await game.init();
+    document.getElementById('gameCanvas').replaceWith(game.app.renderer.canvas);
+}); 

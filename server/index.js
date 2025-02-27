@@ -3,9 +3,9 @@ const path = require('path');
 const { Server } = require('socket.io');
 const fastifyStatic = require('@fastify/static');
 
-// Serve static files
+// Serve static files from Webpack's output directory
 fastify.register(fastifyStatic, {
-  root: path.join(__dirname, '../client'),
+  root: path.join(__dirname, '../client/dist'),
   prefix: '/'
 });
 

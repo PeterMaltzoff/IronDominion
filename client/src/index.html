@@ -46,28 +46,10 @@
 <body>
     <div id="menu">
         <h1>Iron Dominion</h1>
-        <button id="playButton" onclick="window.location.href='/play'">Play</button>
+        <button id="playButton">Play</button>
         <br>
         <input type="text" id="gameIdInput" placeholder="Enter game ID" maxlength="4">
-        <button id="joinButton" onclick="joinGame()">Join Game</button>
+        <button id="joinButton">Join Game</button>
     </div>
-
-    <script>
-        function joinGame() {
-            const gameId = document.getElementById('gameIdInput').value.toUpperCase();
-            if (gameId.length === 4) {
-                window.location.href = `/game/${gameId}`;
-            } else {
-                alert('Please enter a valid 4-character game ID');
-            }
-        }
-
-        // Also allow Enter key to join game
-        document.getElementById('gameIdInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                joinGame();
-            }
-        });
-    </script>
 </body>
 </html> 
