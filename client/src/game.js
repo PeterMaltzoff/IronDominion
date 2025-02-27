@@ -85,7 +85,6 @@ class Game {
         const height = window.innerHeight;
         
         // Draw vertical lines
-        graphics.stroke({ width: 1, color: 0xcccccc, alpha: 0.3 });
         for (let x = 0; x < width; x += 50) {
             graphics.moveTo(x, 0);
             graphics.lineTo(x, height);
@@ -96,6 +95,8 @@ class Game {
             graphics.moveTo(0, y);
             graphics.lineTo(width, y);
         }
+
+        graphics.stroke({ width: 1, color: 0xcccccc, alpha: 0.3 });
         
         this.grid.addChild(graphics);
     }
@@ -104,12 +105,12 @@ class Game {
         graphics.clear();
         
         // Draw body (circle)
-        graphics.fill({ color });
         graphics.circle(0, 0, 20);
+        graphics.fill({ color });
         
         // Draw cannon (rectangle)
-        graphics.fill({ color });
         graphics.rect(0, -10, 30, 20);
+        graphics.fill({ color });
     }
 
     setupSocketListeners() {
