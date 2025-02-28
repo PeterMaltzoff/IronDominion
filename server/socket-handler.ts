@@ -1,14 +1,26 @@
-const { games, findOrCreateGame } = require('./game-manager');
-const GameInstance = require('./models/game-instance');
+import { Server, Socket } from 'socket.io';
+import { games, findOrCreateGame } from './game-manager';
+import GameInstance from './models/game-instance';
 
-function setupSocketHandlers(io) {
+interface PlayerInput {
+  inputs: {
+    up: boolean;
+    down: boolean;
+    left: boolean;
+    right: boolean;
+    shoot: boolean;
+  };
+  rotation: number;
+}
+
+function setupSocketHandlers(io: Server) {
   const gameNamespace = io.of('/game');
   
-  gameNamespace.on('connection', (socket) => {
-    let gameId = null;
+  gameNamespace.on('connection', (socket: Socket) => {
+    let gameId: string | null = null;
     console.log(`Socket connected: ${socket.id}`);
 
-    socket.on('joinGame', (requestedId) => {
+    socket.on('joinGame', (requestedId?: string) => {
       gameId = requestedId || findOrCreateGame();
       
       if (!games.has(gameId)) {
@@ -22,7 +34,7 @@ function setupSocketHandlers(io) {
         games.set(gameId, new GameInstance());
       }
 
-      const game = games.get(gameId);
+      const game = games.get(gameId)!;
       const player = game.addPlayer(socket.id);
       socket.join(gameId);
       
@@ -44,9 +56,9 @@ function setupSocketHandlers(io) {
       socket.to(gameId).emit('playerJoined', player.getState());
     });
 
-    socket.on('playerInput', (data) => {
+    socket.on('playerInput', (data: PlayerInput) => {
       if (gameId && games.has(gameId)) {
-        const game = games.get(gameId);
+        const game = games.get(gameId)!;
         const player = game.players.get(socket.id);
         if (player) {
           player.inputs = data.inputs;
@@ -57,7 +69,7 @@ function setupSocketHandlers(io) {
 
     socket.on('shoot', () => {
       if (gameId && games.has(gameId)) {
-        const game = games.get(gameId);
+        const game = games.get(gameId)!;
         const projectile = game.handlePlayerShoot(socket.id);
         
         if (projectile) {
@@ -67,22 +79,22 @@ function setupSocketHandlers(io) {
       }
     });
 
-    socket.on('upgrade', (stat) => {
+    socket.on('upgrade', (stat: string) => {
       if (gameId && games.has(gameId)) {
-        const game = games.get(gameId);
+        const game = games.get(gameId)!;
         const success = game.upgradePlayer(socket.id, stat);
         
         if (success) {
           // Send updated player state
           const player = game.players.get(socket.id);
-          socket.emit('playerUpdated', player.getState());
+          socket.emit('playerUpdated', player!.getState());
         }
       }
     });
 
     socket.on('disconnect', () => {
       if (gameId && games.has(gameId)) {
-        const game = games.get(gameId);
+        const game = games.get(gameId)!;
         game.removePlayer(socket.id);
         
         if (game.players.size === 0) {
@@ -97,4 +109,4 @@ function setupSocketHandlers(io) {
   return gameNamespace;
 }
 
-module.exports = setupSocketHandlers; 
+export default setupSocketHandlers; 

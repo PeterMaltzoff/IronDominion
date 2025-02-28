@@ -1,4 +1,4 @@
-const { RigidBody } = require('./physics-engine');
+import { RigidBody } from './physics-engine';
 
 // Projectile constants
 const PROJECTILE_RADIUS = 5;
@@ -7,8 +7,28 @@ const PROJECTILE_SPEED = 800;
 const PROJECTILE_DAMAGE = 10;
 const PROJECTILE_LIFETIME = 2; // seconds
 
-class Projectile extends RigidBody {
-  constructor(id, ownerId, x, y, rotation, stats = {}) {
+interface ProjectileStats {
+  damage?: number;
+  health?: number;
+  speed?: number;
+}
+
+interface ProjectileState {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  ownerId: string;
+}
+
+export class Projectile extends RigidBody {
+  ownerId: string;
+  damage: number;
+  health: number;
+  lifetime: number;
+  timeRemaining: number;
+
+  constructor(id: string, ownerId: string, x: number, y: number, rotation: number, stats: ProjectileStats = {}) {
     super(id, x, y, PROJECTILE_RADIUS, PROJECTILE_MASS);
     
     this.ownerId = ownerId;
@@ -28,7 +48,7 @@ class Projectile extends RigidBody {
     this.timeRemaining = this.lifetime;
   }
 
-  update(deltaTime) {
+  update(deltaTime: number): void {
     // Update physics
     super.update(deltaTime);
     
@@ -36,16 +56,16 @@ class Projectile extends RigidBody {
     this.timeRemaining -= deltaTime;
   }
 
-  isDead() {
+  isDead(): boolean {
     return this.timeRemaining <= 0 || this.health <= 0;
   }
 
-  takeDamage(amount) {
+  takeDamage(amount: number): boolean {
     this.health -= amount;
     return this.health <= 0;
   }
 
-  getState() {
+  getState(): ProjectileState {
     return {
       id: this.id,
       x: this.position.x,
@@ -56,4 +76,4 @@ class Projectile extends RigidBody {
   }
 }
 
-module.exports = Projectile; 
+export default Projectile; 

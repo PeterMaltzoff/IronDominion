@@ -1,13 +1,13 @@
-const GameInstance = require('./models/game-instance');
+import GameInstance from './models/game-instance';
 
-const games = new Map();
+const games = new Map<string, GameInstance>();
 const GAME_CAPACITY = 10;
 
-function generateGameId() {
+function generateGameId(): string {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-function findOrCreateGame() {
+function findOrCreateGame(): string {
   for (const [id, game] of games) {
     if (game.players.size < GAME_CAPACITY) {
       return id;
@@ -19,7 +19,7 @@ function findOrCreateGame() {
   return newId;
 }
 
-module.exports = {
+export {
   games,
   GAME_CAPACITY,
   generateGameId,

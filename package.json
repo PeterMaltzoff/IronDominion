@@ -2,13 +2,15 @@
   "name": "iron-dominion",
   "version": "1.0.0",
   "description": "A diep.io-like game using PixiJS, Fastify, and Socket.IO",
-  "main": "server/index.js",
+  "main": "dist/server/index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "server": "nodemon server/index.js",
+    "start": "node dist/server/index.js",
+    "build": "tsc && webpack --mode production",
+    "server": "nodemon --watch 'server/**/*.ts' --exec 'ts-node' server/index.ts",
     "client": "webpack serve --mode development",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "webpack --mode production"
+    "build:server": "tsc",
+    "build:client": "webpack --mode production"
   },
   "dependencies": {
     "@fastify/static": "^6.12.0",
@@ -21,10 +23,14 @@
   "devDependencies": {
     "@babel/core": "^7.26.9",
     "@babel/preset-env": "^7.26.9",
+    "@types/node": "^20.11.30",
+    "@types/socket.io": "^3.0.2",
     "babel-loader": "^9.2.1",
     "concurrently": "^9.1.2",
     "html-webpack-plugin": "^5.6.3",
     "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3",
     "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.0"

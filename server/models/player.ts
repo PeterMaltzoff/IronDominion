@@ -1,12 +1,51 @@
-const { RigidBody } = require('./physics-engine');
+import { RigidBody } from './physics-engine';
 
 const PLAYER_SPEED = 5;
 const PLAYER_RADIUS = 20;
 const PLAYER_MASS = 1;
 const PLAYER_FORCE = 500; // Force to apply when moving
 
-class Player extends RigidBody {
-  constructor(id, x, y) {
+interface PlayerInputs {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  shoot: boolean;
+}
+
+interface PlayerStats {
+  speed: number;
+  damage: number;
+  fireRate: number;
+  projectileSpeed: number;
+  projectileHealth: number;
+}
+
+interface PlayerState {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  rotation: number;
+  level: number;
+  experience: number;
+  health: number;
+  maxHealth: number;
+  stats: PlayerStats;
+}
+
+export class Player extends RigidBody {
+  rotation: number;
+  inputs: PlayerInputs;
+  level: number;
+  experience: number;
+  health: number;
+  maxHealth: number;
+  stats: PlayerStats;
+  shootCooldown: number;
+  baseShootCooldown: number;
+
+  constructor(id: string, x: number, y: number) {
     super(id, x, y, PLAYER_RADIUS, PLAYER_MASS);
     this.rotation = 0;
     this.inputs = {
@@ -35,7 +74,7 @@ class Player extends RigidBody {
     this.baseShootCooldown = 0.5; // seconds
   }
 
-  update(deltaTime = 1/60) {
+  update(deltaTime: number = 1/60): void {
     // Apply forces based on inputs
     let forceX = 0;
     let forceY = 0;
@@ -51,23 +90,22 @@ class Player extends RigidBody {
     // Update physics
     super.update(deltaTime);
     
-    // Update shooting cooldown
+    // Update cooldowns
     if (this.shootCooldown > 0) {
       this.shootCooldown -= deltaTime;
     }
   }
 
-  canShoot() {
+  canShoot(): boolean {
     return this.shootCooldown <= 0;
   }
 
-  shoot() {
-    if (!this.canShoot()) return null;
-    
-    // Set cooldown based on fire rate stat
+  shoot(): void {
+    // Reset cooldown when shooting
     this.shootCooldown = this.baseShootCooldown / this.stats.fireRate;
-    
-    // Return projectile stats
+  }
+
+  getProjectileStats(): { damage: number, speed: number, health: number } {
     return {
       damage: 10 * this.stats.damage,
       speed: 800 * this.stats.projectileSpeed,
@@ -75,63 +113,65 @@ class Player extends RigidBody {
     };
   }
 
-  takeDamage(amount) {
+  takeDamage(amount: number): boolean {
     this.health -= amount;
     return this.health <= 0;
   }
 
-  heal(amount) {
+  heal(amount: number): void {
     this.health = Math.min(this.health + amount, this.maxHealth);
   }
 
-  addExperience(amount) {
+  addExperience(amount: number): boolean {
     this.experience += amount;
     
     // Check for level up
-    const newLevel = Math.floor(1 + Math.sqrt(this.experience / 100));
-    if (newLevel > this.level) {
-      this.levelUp(newLevel);
+    const expNeeded = this.level * 1000;
+    if (this.experience >= expNeeded) {
+      this.levelUp(this.level + 1);
       return true;
     }
     
     return false;
   }
 
-  levelUp(newLevel) {
+  levelUp(newLevel: number): void {
     this.level = newLevel;
     this.maxHealth = 100 + (this.level - 1) * 10;
-    this.health = this.maxHealth;
-    this.radius = PLAYER_RADIUS + (this.level - 1) * 2; // Grow slightly with level
+    this.health = this.maxHealth; // Heal on level up
   }
 
-  upgrade(stat) {
-    if (!this.stats[stat]) return false;
-    
-    // Each upgrade costs level * 10 experience
-    const cost = this.level * 10;
-    
-    if (this.experience < cost) return false;
-    
-    this.experience -= cost;
-    this.stats[stat] += 0.1; // 10% increase per upgrade
-    
-    return true;
+  upgrade(stat: keyof PlayerStats): boolean {
+    if (this.level > Object.values(this.stats).reduce((sum, value) => sum + value - 1, 0)) {
+      if (this.stats[stat] < 10) { // Max level for each stat
+        this.stats[stat]++;
+        
+        // Special case for health upgrade
+        if (stat === 'speed') {
+          this.maxHealth += 10;
+          this.health += 10;
+        }
+        
+        return true;
+      }
+    }
+    return false;
   }
 
-  getState() {
+  getState(): PlayerState {
     return {
       id: this.id,
       x: this.position.x,
       y: this.position.y,
-      rotation: this.rotation,
       radius: this.radius,
-      health: this.health,
-      maxHealth: this.maxHealth,
+      rotation: this.rotation,
       level: this.level,
       experience: this.experience,
-      stats: this.stats
+      health: this.health,
+      maxHealth: this.maxHealth,
+      stats: { ...this.stats }
     };
   }
 }
 
-module.exports = Player; 
+export default Player; 

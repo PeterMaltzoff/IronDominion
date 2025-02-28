@@ -1,14 +1,16 @@
-const fastify = require('fastify')();
-const path = require('path');
-const { Server } = require('socket.io');
-const fastifyStatic = require('@fastify/static');
-const setupRoutes = require('./routes');
-const setupSocketHandlers = require('./socket-handler');
-const { games } = require('./game-manager');
-const GameInstance = require('./models/game-instance');
+import fastify from 'fastify';
+import path from 'path';
+import { Server } from 'socket.io';
+import fastifyStatic from '@fastify/static';
+import setupRoutes from './routes';
+import setupSocketHandlers from './socket-handler';
+import { games } from './game-manager';
+
+// Create fastify instance
+const server = fastify();
 
 // Serve static files from Webpack's output directory
-fastify.register(fastifyStatic, {
+server.register(fastifyStatic, {
   root: path.join(__dirname, '../client/dist'),
   prefix: '/'
 });
@@ -18,16 +20,16 @@ const TICK_RATE = 60;
 const TICK_INTERVAL = 1000 / TICK_RATE;
 
 // Setup routes
-setupRoutes(fastify);
+setupRoutes(server);
 
 // Start server
 const start = async () => {
   try {
-    const PORT = process.env.PORT || 3000;
-    await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+    await server.listen({ port: PORT, host: '0.0.0.0' });
     console.log(`Server running at http://localhost:${PORT}`);
 
-    const io = new Server(fastify.server, {
+    const io = new Server(server.server, {
       path: '/game-socket/'
     });
 

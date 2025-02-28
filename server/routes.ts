@@ -1,6 +1,12 @@
-const { findOrCreateGame, games } = require('./game-manager');
+import { FastifyInstance, FastifyRequest } from 'fastify';
+import { findOrCreateGame, games } from './game-manager';
 
-function setupRoutes(fastify) {
+// Define interface for route parameters
+interface GameParams {
+  id: string;
+}
+
+function setupRoutes(fastify: FastifyInstance): void {
   // Routes
   fastify.get('/', async (request, reply) => {
     return reply.sendFile('index.html');
@@ -14,7 +20,9 @@ function setupRoutes(fastify) {
   });
 
   // Join specific game
-  fastify.get('/game/:id', async (request, reply) => {
+  fastify.get<{
+    Params: GameParams;
+  }>('/game/:id', async (request, reply) => {
     const gameId = request.params.id;
     console.log(`Join game requested for ID: ${gameId}`);
     
@@ -27,4 +35,4 @@ function setupRoutes(fastify) {
   });
 }
 
-module.exports = setupRoutes; 
+export default setupRoutes; 
