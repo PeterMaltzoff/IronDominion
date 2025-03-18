@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server/index.js",
     "build": "tsc && webpack --mode production",
-    "server": "nodemon --watch 'server/**/*.ts' --exec 'ts-node' server/index.ts",
+    "server": "nodemon --watch server/**/*.ts --exec ts-node server/index.ts",
     "client": "webpack serve --mode development",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build:server": "tsc",

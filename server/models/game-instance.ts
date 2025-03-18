@@ -3,8 +3,8 @@ import Projectile from './projectile';
 import { PhysicsEngine, RigidBody } from './physics-engine';
 
 // Game world constants
-const WORLD_WIDTH = 4000;
-const WORLD_HEIGHT = 4000;
+const WORLD_WIDTH = 500;
+const WORLD_HEIGHT = 500;
 
 // Food constants
 const FOOD_TYPES = {
@@ -182,7 +182,9 @@ export class GameInstance {
       player.update(deltaTime);
       
       // Check for food collisions
+      /*
       this.checkFoodCollisions(player);
+      */
     }
     
     // Update projectiles
